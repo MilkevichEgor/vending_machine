@@ -8,8 +8,8 @@ import org.hibernate.query.Query;
 import utils.HibernateSessionFactoryUtil;
 
 import javax.persistence.*;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+
 
 @Entity
 @Table (name = "coins")
@@ -24,6 +24,11 @@ import java.util.List;
 
     @Column(name = "amount")
     private int amount;
+
+    public Coins(int denomination, int amount) {
+        this.denomination = denomination;
+        this.amount = amount;
+    }
 
     public int getId() {
         return id;
@@ -46,7 +51,6 @@ import java.util.List;
         Query query = session.createQuery("SELECT amount FROM Coins WHERE denomination = :denomination");
         query.setParameter("denomination", denomination);
         Integer result = (Integer) query.uniqueResult();
-        System.out.println(result);
         return result;
     }
 
@@ -91,12 +95,12 @@ import java.util.List;
     int[] changeCoins = new int[coinsValues.length];
 
     public Coins() {}
+
     public void addCoins(int coinDenomination) {
 
         for (int i = 0; i < coinsValues.length; i++) {
             if (coinDenomination == coinsValues[i]) {
                 numberOfCoins[i]++;
-//                saveCoinsToDB(coinDenomination);
                 break;
             }
         }
@@ -112,6 +116,7 @@ import java.util.List;
         int change = sum - price;
 
         if (change < 0) {
+            // throw error
             return false;
         }
 
@@ -131,40 +136,103 @@ import java.util.List;
 
     public void giveChange(int change) {
         int remainingChange = change;
+        HibernateCoinsDao hibernateCoinsDao = new HibernateCoinsDao();
 
         if (change == 0) {
             System.out.println("Сдача не требуется");
             return;
         }
 
-        for (int i = 0; i < coinsValues.length; i++) {
-            while (remainingChange >= coinsValues[i]) {
-                if (numberOfCoins[i] == 0) {
-                    break;
+        List<Coins> coinsList = hibernateCoinsDao.getAllCoins("denomination");
+        List<Coins> changeCoins = new ArrayList<>();
+
+            for (Coins coin : coinsList) {
+                int denomination = coin.getDenomination();
+                int availableCoins = coin.getAmount();
+                int numCoinsToGive = Math.min(availableCoins, remainingChange / denomination);
+
+                if (numCoinsToGive > 0) {
+                    remainingChange -= numCoinsToGive * denomination;
+                    coin.setAmount(availableCoins - numCoinsToGive);
+                    hibernateCoinsDao.updateAmount(coin);
+
+                    Coins changeCoin = new Coins(denomination, numCoinsToGive);
+                    changeCoins.add(changeCoin);
+
+                    if (remainingChange == 0) {
+
+                        System.out.println("Сдача выдана: \n");
+                        for (Coins coins : changeCoins) {
+                            System.out.printf("%d монета(ы) номиналом %d руб.\n",coins.getAmount(), coins.getDenomination());
+                        }
+                    }
                 }
-                remainingChange -= coinsValues[i];
-                numberOfCoins[i]--;
-                changeCoins[i]++;
             }
+
+
+
+//        if (remainingChange == 0) {
+//            System.out.println("Сдача выдана:");
+//        }
+
+//        for (int i = 0; i < coinsValues.length; i++) {
+//            while (remainingChange >= coinsValues[i]) {
+//                if (numberOfCoins[i] == 0) {
+//                    break;
+//                }
+//                remainingChange -= coinsValues[i];
+//                numberOfCoins[i]--;
+//                changeCoins[i]++;
+//            }
+//        }
+
+        for (Coins coin : coinsList) {
+            int denomination = coin.getDenomination();
+            int availableCoins = coin.getAmount();
+
+            System.out.printf("В автомате осталось %d монет(ы) номиналом %d руб.\n", availableCoins, denomination);
         }
 
-        if (remainingChange == 0) {
-            System.out.println("Сдача выдана:");
-            for (int i = 0; i < changeCoins.length; i++) {
-                if (changeCoins[i] > 0) {
-                    System.out.printf("%d монета(ы) номиналом %d руб.\n", changeCoins[i], coinsValues[i]);
-                }
-            }
+//        if (remainingChange == 0) {
+//            System.out.println("Сдача выдана:");
+//            for (int i = 0; i < changeCoins.length; i++) {
+//                if (changeCoins[i] > 0) {
+//                    System.out.printf("%d монета(ы) номиналом %d руб.\n", changeCoins[i], coinsValues[i]);
+//                }
+//            }
 
-            for (int i = 0; i < numberOfCoins.length; i++) {
-                if (numberOfCoins[i] > 0) {
-                    System.out.printf("В автомате осталось %d монет(ы) номиналом %d руб.\n", numberOfCoins[i], coinsValues[i]);
-                }
-            }
-            Arrays.fill(changeCoins, 0);
-
-        } else {
-            System.out.println("Извините, в автомате недостаточно монет для выдачи сдачи");
-        }
+//            for (int i = 0; i < numberOfCoins.length; i++) {
+//                if (numberOfCoins[i] > 0) {
+//                    System.out.printf("В автомате осталось %d монет(ы) номиналом %d руб.\n", numberOfCoins[i], coinsValues[i]);
+//                }
+//            }
+//        Arrays.fill(changeCoins, 0);
+//
+//        } else {
+//            System.out.println("Извините, в автомате недостаточно монет для выдачи сдачи");
+//        }
+//        }
     }
 }
+// # Create methods public void giveChange(int change) {
+//         int remainingChange = change;
+//         HibernateCoinsDao hibernateCoinsDao = new HibernateCoinsDao();
+//
+//         if (change == 0) {
+//             System.out.println("Сдача не требуется");
+//             return;
+//         }
+//
+//         List<Coins> coinsList = hibernateCoinsDao.getAllCoins("denomination");
+//         List<Coins> changeCoins = new ArrayList<>();
+//
+//             for (Coins coin : coinsList) {
+//                 int denomination = coin.getDenomination();
+//                 int availableCoins = coin.getAmount();
+//                 int numCoinsToGive = Math.min(availableCoins, remainingChange / denomination);
+//
+//                 if (numCoinsToGive > 0) {
+//                     remainingChange -= numCoinsToGive * denomination;
+//                     coin.setAmount(availableCoins - numCoinsToGive);
+//                     hibernateCoinsDao.updateAmount(coin);
+// }

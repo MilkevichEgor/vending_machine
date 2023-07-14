@@ -11,10 +11,16 @@ public class Main {
     public static void main(String[] args) {
 
         int deposit;
-        SodaMachine sodaMachine = new SodaMachine();
-        Coins coins = new Coins();
 
+        //  get current db state
+        // and put to SodaMachine constructor
         HibernateCoinsDao hibernateCoinsDao = new HibernateCoinsDao();
+        SodaMachine sodaMachine = new SodaMachine(hibernateCoinsDao.getDepositSumFromDB());
+        Coins coins = new Coins();
+        int depositSum = hibernateCoinsDao.getDepositSumFromDB();
+        System.out.println(depositSum);
+
+//        hibernateCoinsDao.getDepositSumFromDB();
 
         while (true) {
 
